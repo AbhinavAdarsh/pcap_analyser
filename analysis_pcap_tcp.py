@@ -31,9 +31,20 @@ class tcp_header:
                 ]
 
 def congestion_control(header_fields):
-    print "in functopn " + str(header_fields.source_port[0])
+    print "in function " + str(header_fields.source_port[0])
 
+def calculate_average_rtt(packet_rtt_seq, packet_rtt_ack):
+    total_rtt_time = {} # port : rtt_time
 
+    for seq_port_comb in packet_rtt_seq:
+        if seq_port_comb in packet_rtt_ack:
+            if seq_port_comb[0] not in total_rtt_time:
+                total_rtt_time[seq_port_comb[0]] = packet_rtt_ack[seq_port_comb] - packet_rtt_seq[seq_port_comb]
+            else:
+                total_rtt_time[seq_port_comb[0]] += packet_rtt_ack[seq_port_comb] - packet_rtt_seq[seq_port_comb]
+
+    for ti in total_rtt_time:
+        print ti, total_rtt_time[ti]
 
 
 def main():
@@ -44,12 +55,19 @@ def main():
     first_syn = 0
     time_diff = 0
     packets_lost = 0
-    start_time = {}
-    end_time = {}
+    start_time = {} # port number : start time(ts)
+    end_time = {} # port number : end time (ts)
     data_sent = {}
     packet_sent = {}
     packet_rcvd = {}
-    packet_seq = []
+    packet_seq = {}  # sequence number : source port
+    retransmitted_seq = {} # Retransmitted sequence : source port
+    packets_sent = {} # source port : total packets sent
+    packet_rtt_seq = {} # (source port, sequence number) : timestamp
+    packet_rtt_ack = {} # (destination port, acknowledgement number) : timestamp
+
+    packet_ack = {}
+    dup_ack = {}
 
     total_packets_sent_source = 0
     total_packets_sent_dest = 0
@@ -86,17 +104,17 @@ def main():
 
         # Question 2
         # congestion_control(header_fields)
+        # print 'Source IP Address' + " " + rcvd_source_ip
+        # print 'Source Port' + " " + str(header_fields.source_port[0])
 
         if rcvd_source_ip == source_ip_address:
+
+            # Store the start and end time for each TCP flow
             if header_fields.flags[0] & SYN == SYN:
                 start_time[header_fields.source_port[0]] = ts
             elif header_fields.flags[0] & FIN == FIN:
                 end_time[header_fields.source_port[0]] = ts
-
-            if header_fields.seq_num not in packet_seq:
-                packet_seq.append(header_fields.seq_num[0])
-            else:
-                packets_lost += 1
+            # ------------------------------------------------------------------------------------------------------ #
 
             if header_fields.source_port[0] not in data_sent:
                 data_sent[header_fields.source_port[0]] = len(buf)
@@ -104,6 +122,40 @@ def main():
             else:
                 data_sent[header_fields.source_port[0]] += len(buf)
                 packet_sent[header_fields.source_port[0]] += 1
+
+            # Find the total number of retransmissions (Include the retransmission for a sequence number only once)
+            if header_fields.seq_num[0] not in packet_seq:
+                packet_seq[header_fields.seq_num[0]] = header_fields.source_port[0]
+
+                if header_fields.source_port[0] not in packets_sent:
+                    packets_sent[header_fields.source_port[0]] = 1
+                else:
+                    packets_sent[header_fields.source_port[0]] += 1
+            else:
+                packets_sent[header_fields.source_port[0]] += 1
+                if header_fields.seq_num[0] not in retransmitted_seq:
+                    retransmitted_seq[header_fields.seq_num[0]] = header_fields.source_port[0]
+                    packets_lost += 1
+            # ------------------------------------------------------------------------------------------------------ #
+
+        # Calculate average RTT for each TCP flow
+
+        if rcvd_source_ip == source_ip_address:
+            if (header_fields.source_port[0], header_fields.seq_num[0]) not in packet_rtt_seq:
+                packet_rtt_seq[(header_fields.source_port[0], header_fields.seq_num[0])] = ts
+
+        if rcvd_source_ip == destination_ip_address:
+            if (header_fields.dest_port[0], header_fields.ack_num[0]) not in packet_rtt_ack:
+                packet_rtt_ack[(header_fields.dest_port[0], header_fields.ack_num[0])] = ts
+        # ------------------------------------------------------------------------------------------------------ #
+
+        if header_fields.ack_num[0] not in packet_ack:
+            packet_ack[header_fields.ack_num[0]] = header_fields.source_port[0]
+        else:
+            if header_fields.ack_num[0] not in dup_ack:
+                dup_ack[header_fields.ack_num[0]] = header_fields.source_port[0]
+                #packets_lost += 1
+                #print 'Duplicate packet'
 
         if rcvd_dest_ip == destination_ip_address:
             if header_fields.dest_port[0] not in data_sent:
@@ -166,10 +218,19 @@ def main():
     for index in start_time_set.intersection(end_time_set):
         #print index, start_time[index], end_time[index]
         print 'For Port '+str(index) +': ' + str(data_sent[index]) + ' bytes were sent for '+str(end_time[index] - start_time[index]) \
-              + ' seconds, Throughput = '+ str(data_sent[index] / (end_time[index] - start_time[index])) + ' Bytes/second'
+              + ' seconds, Throughput = '+ str(data_sent[index] / (end_time[index] - start_time[index])) + ' Bytes/second , '# + 'Packets Lost = ' + str(dup_ack[index])
         #print 'For Port '+str(index) +': ' + 'Packets Sent = ' + str(packet_sent[index]) + ', Packets received = ' + str(packet_rcvd[index])
 
-    print 'Totasl packets lost = ' + str(packets_lost)
+    # for key in retransmitted_seq.items():
+    #      print key
+    #
+    # for count in packets_sent.items():
+    #     print count
+
+    #print 'For Port: '+str(key) + ' Packets sent: ' + str(packet_sent[key]) + ' Packets lost: '+ str(k)
+
+
+    print 'Total packets lost = ' + str(packets_lost)
         # print 'Time = ' + str(end_time[index] - start_time[index])
         # print 'Throughput = ' + str(total_data_sent / ((end_time[index] - start_time[index])*1000))
     # print total_packets_rcvd_dest
@@ -178,6 +239,8 @@ def main():
     # print total_packets_sent_source
     # print 'Packet Loss at '+str(source_ip_address) +' = '+str(total_packets_sent_source - total_packets_rcvd_dest)
     # print 'Packet Loss at '+str(destination_ip_address) +' = '+str(total_packets_sent_dest - total_packets_rcvd_source)
+    calculate_average_rtt(packet_rtt_seq, packet_rtt_ack)
+
 
     f.close()
 
