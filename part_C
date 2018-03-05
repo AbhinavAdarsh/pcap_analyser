@@ -1,0 +1,9 @@
+Part C HTTP Analysis task (30 points)
+
+Commands to capture tcpdump:
+1. sudo tcpdump -i en0 -n port 1080 -w http_1080.pcap
+2. sudo tcpdump -i en0 -n port 1081 -w tcp_1081.pcap
+3. sudo tcpdump -i eno -n port 1082 -w tcp_1082.pcap
+
+For 1. Server: http://www.sbunetsyslabs.com
+For 2 and 3. Server: https://www.sbunetsyslabs.com

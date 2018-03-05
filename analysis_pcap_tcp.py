@@ -124,7 +124,7 @@ def main():
 
         if header_fields.flags[0] & SYN == SYN and header_fields.flags[0] & ACK == ACK:
             header_fields.max_segment = struct.unpack('>H', buf[56:58])
-            print 'MAX Segment = ' + str(header_fields.max_segment[0])
+            # print 'MAX Segment = ' + str(header_fields.max_segment[0])
             MSS = header_fields.max_segment[0]
 
         # Question 2
@@ -187,7 +187,6 @@ def main():
             else:
                 ack_loss_type[(header_fields.dest_port[0], header_fields.ack_num[0])] += 1
 
-
         # ---------------------------------------------------------------------------------------------------------- #
 
         if rcvd_source_ip == destination_ip_address:
@@ -219,10 +218,10 @@ def main():
         if is_SYN_set and is_SYN_ACK_set and is_ACK_set:
             i = i+1
             print 'Packet #' + str(i)
-            print 'Source IP Address' + " " + rcvd_source_ip
-            print 'Destination IP Address' + " " + rcvd_dest_ip
-            print 'Source Port' + " " + str(header_fields.source_port[0])
-            print 'Destination Port' + " " + str(header_fields.dest_port[0])
+            # print 'Source IP Address' + " " + rcvd_source_ip
+            # print 'Destination IP Address' + " " + rcvd_dest_ip
+            # print 'Source Port' + " " + str(header_fields.source_port[0])
+            # print 'Destination Port' + " " + str(header_fields.dest_port[0])
             print 'Sequence Number' + " " + str(header_fields.seq_num[0])
             print 'Acknowledgement Number' + " " + str(header_fields.ack_num[0])
             print 'Window Size ' + str(header_fields.window_size[0])

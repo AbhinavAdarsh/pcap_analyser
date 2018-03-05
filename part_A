@@ -1,0 +1,64 @@
+Part A Wireshark Programming Task (45 points)
+
+We first created our structure to read the bytes into the structure. Used Python library 'dpkt' to get the packets in
+byte form. We read the complete pcap file packet by packet. Parsed each packet based on standard header format of TCP.
+
+We got the start time by checking if the SYN flag is set for each flow. Similarly, to get the end time we checked if the
+FIN flag is set. We also got the MSS (Maximum Segment Size) by checking if both the SYN and ACK flags are set.
+
+For each TCP flow:
+a. We get the first two transactions after the connection is setup using 3-way handshake. We extract and store the
+   values for sequence number, acknowledgement number and receive window size.
+   Sequence number:
+   Acknowledgement number:
+   Window size:
+
+b. We computed the throughput by size of the total data including the data and headers. Dividing this by the difference
+   we get by subtracting the end time and start of each flow.
+
+c. Loss rate is computed by including all the sequence numbers that were retransmitted by the sender and diving it by
+   total number of packets sent.
+
+   Code view:
+   We computed the total packets for each flow and at the same time the retransmitted packets by comparing the sequence
+   number. We stored these values in separate dictionaries of the form {(source port, sequence number) : packet_count}
+   and {(source port, retransmitted sequence) : packet_count}
+
+d. Average RTT is calculated for each TCP flow by adding all the time taken for each transaction and dividing it by
+   total number of transactions done.
+
+   Code view:
+   We made a dictionary of the form {(port number, sequence number) : timestamp} for the packets sent by sender.
+   Same way, we made another dictionary {(port number, ack number) : timestamp} for the packets sent by receiver.
+   We made a function to calculate the RTT for each transaction by comparing the sequence number with ack number
+   and getting the time for the transaction. Finally, the value is averaged out.
+
+   For calculating throughput formula used: (sqrt(3/2) * (MSS / (sqrt(p) * Average RTT)))
+   We see the empirical throughput we got from the pcap logs is less than the throughput we got by the above formula.
+   The difference is because while using the formula, we are taking the average RTT values, loss rate and fixed MSS.
+   On the other hand, the empirical throughput calculation is done on the real network data and we know TCP throughput
+   is highly sensitive to loss which may be caused due to different network conditions.
+
+-----------
+1
+If you mean CWND by 'congestion window' as defined in RFC 2581, the answer to your question is: You can't 'get' that value directly from the capture file,
+ as it is not advertized.
+
+   CONGESTION WINDOW (cwnd):  A TCP state variable that limits the
+      amount of data a TCP can send.  At any given time, a TCP MUST NOT
+      send data with a sequence number higher than the sum of the
+      highest acknowledged sequence number and the minimum of cwnd and
+      rwnd.
+To be more specific:
+
+The CWND is just an internal variable on the sender side to manage the amount of bytes that it is allowed to send at any time.
+ The value of CWND is calculated according to a certain algorithm (see the RFC). Basically the value is increased for every
+ 'good' ACK (in time, not duplicate) and decreased for a 'bad' ACK (timeout, DUP ACK). So, during a TCP connection the value
+  of CWND is somewhere between a defined start value (depends on the algorithm) and the Receiver Window Size (RWND), as
+  advertized by the receiver. In a capture file you can see the RWND (advertized value: tcp.window_size_value, with scaling
+   factor: tcp.window_size) but not the CWND, as it is only calculated within the senders TCP implementation.
+
+However: You can 'estimate' the CWND at any time during a TCP connection, if you know the senders congestion algorithm and
+the configuration values (amount of bytes for increase/decreas), by looking at the sent frames and the received ACKs.
+There is no such functionality in Wireshark, but with some scripting (tshark) it should be possible to calculate the CWND,
+at least as an estimation.
