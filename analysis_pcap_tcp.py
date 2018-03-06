@@ -391,38 +391,6 @@ def main():
         print 'Packet loss due to triple duplicate ACKs for Port: ' + str(key) + ' = ' + \
               str(retransmission_dup_ack[key])
     # ---------------------------------------------------------------------------------------------------------------- #
-    # for key in sender_to_receiver:
-    #     unique_seq_num = set()
-    #     for val in sender_to_receiver[key]:
-    #         unique_seq_num.add(val[0])
-    #     print 'Loss Rate of TCP flow for Port: ' + str(key[0]) + ' = ' + str(float(len(sender_to_receiver[key])
-    #           - (len(unique_seq_num) + 1)) / len(sender_to_receiver[key]))
-    ret_packet_dict = {}        # {(port, ack_num) : packet_count}
-    send_packet_dict = {}       # {(port, seq_num) : packet_count}
-
-    # for key in receiver_to_sender:
-    #     for val in receiver_to_sender[key]:
-    #         #print val
-    #         if (key[0], val[1]) not in ret_packet_dict:
-    #             ret_packet_dict[(key[0], val[1])] = 1
-    #         else:
-    #             ret_packet_dict[(key[0], val[1])] += 1
-    #
-    # for key in sender_to_receiver:
-    #     for val in sender_to_receiver[key]:
-    #         #print val
-    #         if (key[0], val[0]) not in send_packet_dict:
-    #             send_packet_dict[(key[0], val[0])] = 1
-    #         else:
-    #             send_packet_dict[(key[0], val[0])] += 1
-    #
-    # cnt = 0
-    # for key in ret_packet_dict:
-    #     if ret_packet_dict[key] > 3:
-    #         if key in send_packet_dict:
-    #             if send_packet_dict[key] > 1:
-    #                 cnt += 1
-    # print cnt
 
     f.close()
 
