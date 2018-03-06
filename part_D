@@ -1,8 +1,16 @@
 Part D Fairness (10 points)
 
 
-(1) Multiplicative Increase Additive Decrease (MIAD): If MIAD is used, we can see from the graph that
+(1) Multiplicative Increase Additive Decrease (MIAD): If MIAD is used, we can see from the graph that when loss occurs,
+    it is decreased linearly and then increased rapidly. The graph shows that it is not fair as it is going away from
+    the fairness line.
 
-(2) Multiplicative Increase Multiplicative Decrease:
+(2) Multiplicative Increase Multiplicative Decrease (MIMD): If MIMD is used, we can see from the graph that when loss
+    occurs, it is decreased rapidly and then increased rapidly. The graph clearly shows that in such scenarios, the line
+    goes away from the fairness line, thus unequal distribution. So, it is not fair.
 
-(3) Additive Increase Additive Decrease:
+(3) Additive Increase Additive Decrease (AIAD: If AIAD is used , we can see from the graph that when loss occurs, it is
+    decreased linearly and then increased linearly. This results in the line staying in parallel with the fairness
+    line. Therefore, again not fair distribution among the two runnig flows.
+
+    # Figure for all the three cases are added in the folder.

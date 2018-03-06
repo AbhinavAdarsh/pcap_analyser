@@ -60,6 +60,7 @@ def load_http(pcap_read):
 
             if header_fields.flags[0] & SYN_ACK == SYN_ACK:
                 tcp_flows += 1
+
             # ------------------------------------------------------------------------------------------------------ #
             offset = ((header_fields.offset_resvd[0]) >> 4) * 4
 
@@ -96,15 +97,9 @@ def load_http(pcap_read):
         print 'Response: '
         for values in response_dict[key]:
             print values
+        # print 'Total TCP flows = ' + str(tcp_flows)
         print '------------------------------------------------------------------'
 
-    # for key in request_dict:
-    #     print request_dict[key]
-    #
-    # for key in response_dict:
-    #     for val in response_dict[key]:
-    #         #print val
-    #         pass
 
 def calculate_stats(pcap_read):
     start_time_http = 0
@@ -121,21 +116,21 @@ def calculate_stats(pcap_read):
         if start_time_http == 0:
             start_time_http = ts
 
-    print 'Time to load = ' + str(end_time_http - start_time_http)
+    print 'Time to load = ' + str(end_time_http - start_time_http) + ' Seconds'
     print 'Total packets = ' + str(total_packets)
-    print 'Total data sent = ' + str(total_data)
+    print 'Total data sent = ' + str(total_data) + ' Bytes'
     print '------------------------------------------------------------------'
 
 
 def main():
 
-    f = open('tcp_1080.pcap')
+    f = open('http_1080.pcap')
     pcap_read = dpkt.pcap.Reader(f)
     load_http(pcap_read)
     f.close()
 
     print 'For port: 1080'
-    f = open('tcp_1080.pcap')
+    f = open('http_1080.pcap')
     pcap_read = dpkt.pcap.Reader(f)
     calculate_stats(pcap_read)
     f.close()

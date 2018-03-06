@@ -1,9 +1,61 @@
 Part C HTTP Analysis task (30 points)
 
-Commands to capture tcpdump:
+i) Commands to capture tcpdump:
 1. sudo tcpdump -i en0 -n port 1080 -w http_1080.pcap
 2. sudo tcpdump -i en0 -n port 1081 -w tcp_1081.pcap
 3. sudo tcpdump -i eno -n port 1082 -w tcp_1082.pcap
 
-For 1. Server: http://www.sbunetsyslabs.com
-For 2 and 3. Server: https://www.sbunetsyslabs.com
+For 1. Server: http://www.sbunetsyslabs.com:1080
+For 2. Server: https://www.sbunetsyslabs.com:1081
+For 3. Server: https://www.sbunetsyslabs.com:1082
+
+
+1. Reassemble each unique HTTP Request/Response for http_1080.pcap
+
+   For request / response:
+   Unique tuple: ( source_ip, source_port, dest_ip, dest_port, seq_num, ack_num)
+
+   To identify the request, first check the request type is 'GET', then for response check for 'HTTP'.
+   We only take the packets which has data field included. We get all the segments which contains the
+   data corresponding to the request.
+
+
+2. Identify which HTTP protocol is being used for each PCAP file.
+
+   We can identify the HTTP protocol for port 1080 directly from wireshark log since it is not encrypted. But for other
+   two ports we cannot. We used the number of TCP flows initiated by each port to identify the HTTP protocols used.
+   http_1080.pcap: GET request goes through HTTP/1.1 but the server responds through HTTP/1.0. Also, evident from the
+   number of TCP flows = 18. For tcp_1081.pcap, we see number of TCP flows = 6 which clarifies it is using HTTP/1.1.
+   Similarily, tcp_1082.pcap is using just one TCP flow, therefore it is using HTTP/2.0.
+
+   http_1080.pcap - HTTP/1.0
+   tcp_1081.pcap -  HTTP/1.1
+   tcp_1082.pcap -  HTTP/2.0
+
+3. Which version of the protocol did the site load the fastest under?
+   > Under HTTP/2.0, the site loaded the fastest : Least amount of packets are sent and only one TCP flow is maintained
+   > Slowest under HTTP/1.1: Six TCP flows are maintained and sends most amount of RAW data.
+
+   Most and least number of packets and raw bytes?
+   > Most number of packets are sent by HTTP 1.0: 18 TCP flows are created
+   > Least packets are sent by HTTP 2.0: Only one TCP flow is maintained
+
+    Statistics for all 3 HTTP versions:
+    ------------------------------------------------------------------
+    For port: 1080
+    Time to load = 0.404052972794 Seconds
+    Total packets = 2727
+    Total data sent = 2325282 Bytes
+    ------------------------------------------------------------------
+    For port: 1081
+    Time to load = 5.48844909668 Seconds
+    Total packets = 2683
+    Total data sent = 2339453 Bytes
+    ------------------------------------------------------------------
+    For port: 1082
+    Time to load = 0.368914842606 Seconds
+    Total packets = 2191
+    Total data sent = 2320699 Bytes
+    ------------------------------------------------------------------
+
+    # Complete output for the program written for HTTP is included by name 'output_partC.txt'
