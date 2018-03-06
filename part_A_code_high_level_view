@@ -1,0 +1,36 @@
+We first created our structure to read the bytes into the structure. Used Python library 'dpkt' to get the packets in
+byte form. We read the complete pcap file packet by packet. Parsed each packet based on standard header format of TCP.
+
+We got the start time by checking if the SYN flag is set for each flow. Similarly, to get the end time we checked if the
+FIN flag is set. We also got the MSS (Maximum Segment Size) by checking if both the SYN and ACK flags are set.
+
+For getting the first two transactions after handshake is performed:
+We made two dictionaries of the form:
+{port,ip_address : (seq, ack, window size)} for sender to receiver and receiver to sender.
+
+For the sender, we took the transactions from index 2 onwards as first two index stores SYN and ACK packet
+for the handshake. Similarly, we ignores the first packet from the receiver side as that is SYN-ACK packet
+used for handshake.
+
+For calculating Throughput:
+We stored all the buffer lengths which include both header and data which is sent over the network. We also,
+stored the individual start and end time for each TCP flow. We divided both to get the required throughput.
+
+For computing loss rate:
+We get the count of duplicate sequence numbers sent by the sender from the dictionary made earlier to
+store each packet. We traversed through the dictionary and stored the unique sequence numbers by storing
+it in a set. The difference of both gave us the loss/retransmissions for the lost packets. Dividing it
+by corresponding (end time - start time) difference gave us the required loss rate for each flow.
+
+For calculating Average RTT and comparison:
+We made a dictionary of the form {(port number, sequence number) : timestamp} for the packets sent by sender.
+Same way, we made another dictionary {(port number, ack number) : timestamp} for the packets sent by receiver.
+We made a function to calculate the RTT for each transaction by comparing the sequence number with ack number
+and getting the time for the transaction. Finally, the value is averaged out.
+
+For calculating the throughput, we directly applied the formula: (sqrt(3/2) * (MSS / (sqrt(p) * Average RTT)
+We already had the required average RTT and MSS values calculated.
+
+
+
+

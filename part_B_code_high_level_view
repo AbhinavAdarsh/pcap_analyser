@@ -1,0 +1,22 @@
+This part is a continuation to the part A code and includes the code explanation written specifically for part B.
+
+1. For getting the first ten congestion windows (or less, if not 10, then till the end)
+We first checked for the packet containing data (generally after the handshake). We calculated the next expected value
+by adding the sequence number and data to be sent (by subtracting the offset (header length) from the total packet).
+Now, we continue to wait for the packet with the ack number equal to the calculated value. When the packet arrives,
+we get the new expected value and the window size is added to a list corresponding ot it's TCP flow. We continue
+the process till end of the each TCP flow.
+
+
+For calculating retransmissions:
+We computed the total packets for each flow and at the same time the retransmitted packets by comparing the sequence
+number. We stored these values in separate dictionaries of the form {(source port, sequence number) : packet_count}
+and {(source port, retransmitted sequence) : packet_count}
+
+For determining whether the retransmission is due to triple duplicate acks or timeout, we check the count of the
+duplicate acks from the receiver, if it more than 3, then we proceed to check whether the packet with the sequence
+number has been retransmitted from the sender side or not. If retransmitted, we need to check the timings as if both
+the above conditions satisfy, still we could see from the wireshark logs, the retrasmit packet from senders shows
+out-of-delivery. So, if all three conditions satisfy, then only we can confirm the retransmission is due to triple
+duplicate acks. We cna directly subtract the total retransmissions and retransmissions due to triple DUP acks to get
+the retransmissions due to timeout.

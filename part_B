@@ -4,21 +4,24 @@ Part B Congestion control (15 points)
    at the sender side. The reason being 'CWND' size dictates the amount of data that can be sent by the TCP into the
    network. The sender analyses the network based on ack sent by receiver and adjusts its CWND size.
 
+   Estimation of initial congestion window size:
+   We calculated the initial congestion window size empirically by adding the sequence number to the data to be sent.
+   Procedure explained in the code view part.
+
+   Growth of congestion window size:
    Congestion window's initial size is set to small multiple of MSS and it increases rapidly based on ack received.
    TCP follows AIMD (Additive Increse Multiplicative Decrease) approach to control the CWND size. In the slow start
    phase, TCP increases CWND size rapidly to reach 'ssthreshold' value. Then, it enters congestion avoidance phase,
    where it increases CWND size linearly after receiving each ack. Once, any loss/timeout occurs, the CWND size is
    decreased and sstresh is set to CWND/2 before the loss.
 
-   Estimation of initial congestion window size:
-
-
 
 2. Retransmission of packets occur either due to timeout or receipt of triple duplicate ack from the receiver. We
-   do this at sender side as the decision to retransmit the packet is taken at sender's side. The timer is mainta-
-   ined at sender side, and it timeout occurs due to non-receipt of ack from the receiver, it retransmits the packet.
+   do this at 'sender side' as the decision to retransmit the packet is taken at sender's side. The timer is mainta-
+   ined at sender side, and if timeout occurs due to non-receipt of ack from the receiver, it retransmits the packet.
    Also, if it receives three duplicate acks for the same sequence number (total 4), it assumes the packet is not
-   received and retransmits the sequence number.
+   received and retransmits the sequence number. In case of timeout, normal retransmission occurs while in case of
+   receipt of triple duplicate acks, fast retransmission occurs.
 
 
 

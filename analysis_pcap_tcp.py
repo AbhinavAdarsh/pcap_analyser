@@ -52,11 +52,6 @@ def calculate_average_rtt(packet_rtt_seq, packet_rtt_ack, total_rtt_time, packet
 
 def main():
 
-    is_SYN_set = 0
-    is_SYN_ACK_set = 0
-    is_ACK_set = 0
-    first_syn = 0
-    time_diff = 0
     packets_lost = 0
     start_time = {}                 # port number : start time(ts)
     end_time = {}                   # port number : end time (ts)
@@ -96,12 +91,8 @@ def main():
     receiver_to_sender = defaultdict(list)         # {port,ipadress : (seq, ack, window size)}
     ##########################
 
-    # print 'start'
     f = open('assignment2.pcap')
     pcapRead = dpkt.pcap.Reader(f)
-    # #print dpkt.tcp.parse_opts(pcapRead.readpkts())
-    # #dpkt.dpkt.Packet()
-    # #
     i = 0
     tcp_flows = 0
     count = 0
@@ -110,10 +101,10 @@ def main():
     expected_data = {}             # {port : expected_data}
     total_data = {}                # {port : total_data}
     packet_count = {}              # {port : packet_count}
+    window_list = defaultdict(list)
 
     for ts, buf in pcapRead:
 
-        #print ts, len(buf)
         header_fields = tcp_header()
         header_fields.source_IP = struct.unpack('>I',buf[26:30])
         rcvd_source_ip = str(ipaddress.ip_address(header_fields.source_IP[0]))
@@ -133,32 +124,31 @@ def main():
         offset = ((header_fields.offset_resvd[0]) >> 4) * 4
         # Ethernet + IP +  TCP Header + Options field - To get the start of DATA field
         data_field = (14 + 20 + offset)
-        #print data_field
+
         if rcvd_source_ip == source_ip_address:
             if len(buf) > data_field:
                 if header_fields.source_port[0] not in expected_data:
                     expected_data[header_fields.source_port[0]] = header_fields.seq_num[0] + len(buf) - data_field
                     total_data[header_fields.source_port[0]] = len(buf)
                     packet_count[header_fields.source_port[0]] = 1
-                    print header_fields.seq_num[0] + len(buf) - data_field, header_fields.source_port[0]
                 else:
                     total_data[header_fields.source_port[0]] += len(buf)
                     packet_count[header_fields.source_port[0]] += 1
-            # else:
-            #     expected_data[header_fields.source_port] += len(buf) #- data_field
 
         if rcvd_source_ip == destination_ip_address:
-            if header_fields.dest_port[0] in expected_data and header_fields.ack_num[0] == expected_data[header_fields.dest_port[0]]:
-                print 'Reached'
+            if header_fields.dest_port[0] in expected_data and header_fields.ack_num[0] == \
+                    expected_data[header_fields.dest_port[0]]:
+                window_list[header_fields.dest_port[0]].append(total_data[header_fields.dest_port[0]])
                 del expected_data[header_fields.dest_port[0]]
-                print total_data[header_fields.dest_port[0]], packet_count[header_fields.dest_port[0]]
-
-
+        # ------------------------------------------------------------------------------------------------------ #
+        # Count the total number of TCP flows
+        if header_fields.flags[0] & SYN_ACK == SYN_ACK:
+            tcp_flows += 1
         # ------------------------------------------------------------------------------------------------------ #
 
         if header_fields.flags[0] & SYN == SYN and header_fields.flags[0] & ACK == ACK:
             header_fields.max_segment = struct.unpack('>H', buf[56:58])
-            # print 'MAX Segment = ' + str(header_fields.max_segment[0])
+            # Store the 'MAX Segment Size'
             MSS = header_fields.max_segment[0]
 
         if rcvd_source_ip == destination_ip_address:
@@ -233,8 +223,6 @@ def main():
 
         if rcvd_source_ip == source_ip_address and ack_num_win != 0:
             seq_num_win = header_fields.seq_num[0]
-            # for value_list in congestion_window.values():
-            #     if (seq_num_win - ack_num_win) not in value_list:
             congestion_window[header_fields.source_port[0]].append(seq_num_win - ack_num_win)
             ack_num_win = 0
 
@@ -245,11 +233,9 @@ def main():
         else:
             if header_fields.ack_num[0] not in dup_ack:
                 dup_ack[header_fields.ack_num[0]] = header_fields.source_port[0]
-                #packets_lost += 1
-                #print 'Duplicate packet'
 
         if rcvd_dest_ip == destination_ip_address:
-            if header_fields.dest_port[0] not in data_sent:
+            if header_fields.dest_port[0] not in packet_rcvd:
                 packet_rcvd[header_fields.dest_port[0]] = 1
             else:
                 packet_rcvd[header_fields.dest_port[0]] += 1
@@ -262,7 +248,6 @@ def main():
             total_packets_sent_dest += 1
         if destination_ip_address == rcvd_dest_ip:
             total_packets_rcvd_dest += 1
-
 
     start_time_set = set(start_time)
     end_time_set = set(end_time)
@@ -299,7 +284,7 @@ def main():
         # print index, start_time[index], end_time[index]
         print 'For Port '+str(index) + ': ' + str(data_sent[index]) + ' bytes were sent for '+ \
               str(end_time[index] - start_time[index]) + ' seconds, Throughput = '+ \
-              str(data_sent[index] / ((end_time[index] - start_time[index])*100)) + ' Bps'
+              str((data_sent[index]/1024) / (end_time[index] - start_time[index]))
     print '-------------------------------------------------------------------------------------'
 
     # ---------------------------------------------------------------------------------------------------------------- #
@@ -323,7 +308,6 @@ def main():
         print 'Loss Rate of TCP flow for Port: ' + str(key[0]) + ' = ' + str(float(len(receiver_to_sender[key]) -
                                                      len(unique_ack_num)) / len(receiver_to_sender[key]))
     print '-------------------------------------------------------------------------------------'
-
     # ---------------------------------------------------------------------------------------------------------------- #
 
     for key in packet_seq:
@@ -379,12 +363,6 @@ def main():
 
     # ---------------------------------------------------------------------------------------------------------------- #
     # PART B.1: Initial 10 (if available) congestion window sizes for each TCP flow
-    window_list = defaultdict(list)
-    for key in congestion_window:
-        for i in range(0, len(congestion_window[key])):
-            if congestion_window[key][i] not in window_list[key] and congestion_window[key][i] > 0 and \
-                    len(window_list[key]) < 10:
-                window_list[key].append(congestion_window[key][i])
 
     for key in window_list:
         print 'First 10 Congestion Window sizes for Port: ' + str(key) + ' ' + str(window_list[key])
@@ -419,11 +397,35 @@ def main():
     #         unique_seq_num.add(val[0])
     #     print 'Loss Rate of TCP flow for Port: ' + str(key[0]) + ' = ' + str(float(len(sender_to_receiver[key])
     #           - (len(unique_seq_num) + 1)) / len(sender_to_receiver[key]))
+    ret_packet_dict = {}        # {(port, ack_num) : packet_count}
+    send_packet_dict = {}       # {(port, seq_num) : packet_count}
 
+    for key in receiver_to_sender:
+        for val in receiver_to_sender[key]:
+            #print val
+            if (key[0], val[1]) not in ret_packet_dict:
+                ret_packet_dict[(key[0], val[1])] = 1
+            else:
+                ret_packet_dict[(key[0], val[1])] += 1
 
+    for key in sender_to_receiver:
+        for val in sender_to_receiver[key]:
+            #print val
+            if (key[0], val[0]) not in send_packet_dict:
+                send_packet_dict[(key[0], val[0])] = 1
+            else:
+                send_packet_dict[(key[0], val[0])] += 1
 
+    cnt = 0
+    for key in ret_packet_dict:
+        if ret_packet_dict[key] > 3:
+            if key in send_packet_dict:
+                if send_packet_dict[key] > 1:
+                    cnt += 1
+    print cnt
 
     f.close()
+
 
 if __name__ == '__main__':
     main()

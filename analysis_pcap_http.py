@@ -34,25 +34,6 @@ class tcp_header:
                 ("if_get",'s')          # If http request / response
                 ]
 
-def congestion_control(header_fields):
-    print "in function " + str(header_fields.source_port[0])
-
-def calculate_average_rtt(packet_rtt_seq, packet_rtt_ack, total_rtt_time, packet_rtt_count):
-
-    for seq_port_comb in packet_rtt_seq:
-        if seq_port_comb in packet_rtt_ack:
-            if seq_port_comb[0] not in total_rtt_time:
-                total_rtt_time[seq_port_comb[0]] = packet_rtt_ack[seq_port_comb] - packet_rtt_seq[seq_port_comb]
-                if seq_port_comb[0] not in packet_rtt_count:
-                    packet_rtt_count[seq_port_comb[0]] = 1
-                else:
-                    packet_rtt_count[seq_port_comb[0]] += 1
-            else:
-                total_rtt_time[seq_port_comb[0]] += packet_rtt_ack[seq_port_comb] - packet_rtt_seq[seq_port_comb]
-                packet_rtt_count[seq_port_comb[0]] += 1
-
-    return total_rtt_time
-
 def load_http(pcap_read):
     request_dict = defaultdict(list)
     response_dict = defaultdict(list)
@@ -81,6 +62,7 @@ def load_http(pcap_read):
                 tcp_flows += 1
             # ------------------------------------------------------------------------------------------------------ #
             offset = ((header_fields.offset_resvd[0]) >> 4) * 4
+
             # Ethernet + IP +  TCP Header + Options field - To get the start of DATA field
             data_field = (14 + 20 + offset)
 
@@ -99,28 +81,30 @@ def load_http(pcap_read):
 
                 header_fields.if_get += (struct.unpack('>s', buf[data_field + 3]))[0].decode("utf8", errors='ignore')
 
-                # if header_fields.if_get == 'HTTP':
-
                 if get_request_ip != 0 and rcvd_dest_ip == get_request_ip:
                     response_dict[header_fields.dest_port[0]].append((rcvd_source_ip, header_fields.source_port[0],
                     rcvd_dest_ip, header_fields.dest_port[0], header_fields.seq_num[0], header_fields.ack_num[0]))
         except:
-            #print 'error'
             pass
 
-    print 'Req' + str(len(request_dict))
-    for key in request_dict:
-        print request_dict[key]
+    request_set = set(request_dict)
+    response_set = set(response_dict)
 
-    print 'Res' + str(len(response_dict))
+    print '------------------------------------------------------------------'
+    for key in request_set.intersection(response_set):
+        print 'Request: ' + str(request_dict[key])
+        print 'Response: '
+        for values in response_dict[key]:
+            print values
+        print '------------------------------------------------------------------'
 
-    for key in response_dict:
-        #print 'Nothing'
-        for val in response_dict[key]:
-            print val
-
-    print tcp_flows
-
+    # for key in request_dict:
+    #     print request_dict[key]
+    #
+    # for key in response_dict:
+    #     for val in response_dict[key]:
+    #         #print val
+    #         pass
 
 def calculate_stats(pcap_read):
     start_time_http = 0
@@ -140,7 +124,7 @@ def calculate_stats(pcap_read):
     print 'Time to load = ' + str(end_time_http - start_time_http)
     print 'Total packets = ' + str(total_packets)
     print 'Total data sent = ' + str(total_data)
-    print '-------------------------------------------------------'
+    print '------------------------------------------------------------------'
 
 
 def main():
@@ -150,6 +134,7 @@ def main():
     load_http(pcap_read)
     f.close()
 
+    print 'For port: 1080'
     f = open('tcp_1080.pcap')
     pcap_read = dpkt.pcap.Reader(f)
     calculate_stats(pcap_read)
@@ -158,9 +143,9 @@ def main():
     f = open('tcp_1081.pcap')
     pcap_read = dpkt.pcap.Reader(f)
     load_http(pcap_read)
-    #calculate_stats(pcap_read)
     f.close()
 
+    print 'For port: 1081'
     f = open('tcp_1081.pcap')
     pcap_read = dpkt.pcap.Reader(f)
     calculate_stats(pcap_read)
@@ -171,10 +156,12 @@ def main():
     load_http(pcap_read)
     f.close()
 
+    print 'For port: 1082'
     f = open('tcp_1082.pcap')
     pcap_read = dpkt.pcap.Reader(f)
     calculate_stats(pcap_read)
     f.close()
+
 
 if __name__ == '__main__':
     main()
